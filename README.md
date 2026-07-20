@@ -16,7 +16,7 @@ Ekstensi ini bekerja secara otomatis saat Anda membuka resi Lion Parcel di brows
 
 ## Catatan Penting
 
-Ekstensi ini tidak tersedia di Chrome Web Store karena belum dipublikasikan. Karena itu, instalasi dilakukan secara manual melalui mode Load unpacked.
+Ekstensi ini tidak tersedia di Chrome Web Store karena belum dipublikasikan. Karena itu, instalasi dilakukan secara manual melalui mode Load unpacked. ekstensi ini tidak akan tersingkronisasi antar perangkat, user perlu menginstall secara manual disetiap komputer dan disetiap profil jika ingin memakainya.
 
 ## Prasyarat
 
@@ -36,6 +36,7 @@ Ekstensi ini tidak tersedia di Chrome Web Store karena belum dipublikasikan. Kar
 6. Klik tombol Load unpacked.
 7. Pilih folder proyek ini sebagai lokasi ekstensi.
 8. Jika berhasil, ekstensi akan muncul di daftar ekstensi dan siap digunakan.
+
 
 ## Cara Pakai
 
