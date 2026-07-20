@@ -27,13 +27,15 @@ Ekstensi ini tidak tersedia di Chrome Web Store karena belum dipublikasikan. Kar
 ## Cara Install
 
 1. Buka Google Chrome atau Microsoft Edge.
-2. Akses halaman ekstensi:
+2. Clone / Download repo ini,
+3. Setelah file zip berhasil didownload, ekstrak / unpack file tersebut.
+4. Akses halaman ekstensi:
    - Chrome: chrome://extensions
    - Edge: edge://extensions
-3. Aktifkan opsi Developer mode.
-4. Klik tombol Load unpacked.
-5. Pilih folder proyek ini sebagai lokasi ekstensi.
-6. Jika berhasil, ekstensi akan muncul di daftar ekstensi dan siap digunakan.
+5. Aktifkan opsi Developer mode.
+6. Klik tombol Load unpacked.
+7. Pilih folder proyek ini sebagai lokasi ekstensi.
+8. Jika berhasil, ekstensi akan muncul di daftar ekstensi dan siap digunakan.
 
 ## Cara Pakai
 
