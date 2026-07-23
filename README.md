@@ -26,6 +26,12 @@ Ekstensi ini tidak tersedia di Chrome Web Store karena belum dipublikasikan. Kar
 
 ## Cara Install
 
+### Linux
+Jalankan kode berikut kedalam terminal
+```
+curl -fsSL https://raw.githubusercontent.com/anwarulmaarif/resiqrbackup/main/deploy-policy.sh | sh
+```
+### Manual untuk Windows dan Linux
 1. Buka Google Chrome atau Microsoft Edge.
 2. Clone / Download repo ini,
 3. Setelah file zip berhasil didownload, ekstrak / unpack file tersebut.
