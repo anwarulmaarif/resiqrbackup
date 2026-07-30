@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "STT QR Backup Injector",
-  "version": "1.0",
+  "version": "2.0",
   "description": "Menambahkan QR code backup berisi nomor STT ke PDF resi Lion Parcel, sebagai cadangan kalau barcode utama rusak/tidak terbaca scanner.",
   "author": "Anwarul Maarif",
   "homepage_url": "https://github.com/anwarulmaarif/resiqrbackup",

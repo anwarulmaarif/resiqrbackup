@@ -5,7 +5,7 @@ sudo mkdir -p /etc/opt/chrome/policies/managed
 
 echo '{
   "ExtensionInstallForcelist": [
-    "mhanihkoenmikcillkfniakbcdbkcelg;https://raw.githubusercontent.com/anwarulmaarif/resiqrbackup/main/update.xml"
+    "dnlilbhbhfjjghmjaojfllbfecggoofa;https://raw.githubusercontent.com/anwarulmaarif/resiqrbackup/main/update.xml"
   ]
 }' | sudo tee /etc/opt/chrome/policies/managed/resiqrbackup.json > /dev/null
 

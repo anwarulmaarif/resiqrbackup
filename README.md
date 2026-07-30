@@ -71,6 +71,24 @@ Jika QR code tidak muncul:
 - Coba refresh halaman resi
 - Periksa console browser jika ada error
 
+## Unistall
+
+Untuk uninstall atau menghapus ektensi ini silakan ikuti cara berikut
+ - Jika install lewat Linux (Deploy Policy)
+   1. buka terminal dan jalankan kode berikut
+   ```
+   sudo tee /etc/opt/chrome/policies/managed/resiqrbackup.json
+   ```
+   2. tutup tab genesis dan buka tab baru untuk merefresh cache halaman.
+
+ - Jika install manual
+   1. buka menu manage extension / kelola ekstensi atau buka lewat url
+   ```
+   chrome://extensions/
+   ```
+   2. klik tombol remove/hapus
+   3. tutup tab genesis dan buka tab baru untuk merefresh cache halaman.
+
 ## Pengembang
 
 Dikembangkan oleh Anwarul Maarif.

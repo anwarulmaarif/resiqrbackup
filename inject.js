@@ -3,14 +3,32 @@
 
   // ================== KONFIGURASI (kalibrasi posisi QR di sini) ==================
   const CONFIG = {
-    URL_PATTERN: /\/hydra\/v2\/stt\/resi\/([A-Za-z0-9]+)/,
+    // Title PDF harus mengandung kata ini (case-insensitive) supaya dianggap "resi".
+    // Pengaman tambahan biar nggak ke-trigger dokumen lain yang kebetulan ada nomor STT-nya.
+    TITLE_MUST_CONTAIN: /resi/i,
 
-    // Posisi & ukuran QR backup (satuan point PDF, 1pt = 1/72 inch)
-    // Titik (0,0) = KIRI BAWAH halaman
+    // Pola nomor resi Lion Parcel: 2 digit + 2 huruf + digit panjang (contoh: 11LP1785157457710).
+    // Dicari di MANA PUN di dalam Title, nggak peduli struktur nama file di sekitarnya.
+    RESI_NUMBER_PATTERN: /\d{2}[A-Z]{2}\d{8,}/i,
+
+    // Posisi QR: X fixed (point), karena posisi horizontal konten resi selalu sama
+    // baik di kertas thermal maupun A4 (kontennya nempel di kiri, bukan di-scale).
     QR_X: 140,
-    QR_Y: 550,
-    QR_SIZE: 70,
+
+    // Y dihitung dari JARAK-DARI-ATAS halaman (bukan fraction dari tinggi total!),
+    // karena konten resi selalu nempel di ATAS halaman -- sisa kertas kosong di bawah
+    // itu cuma buffer buat A4 (biar bisa dipotong manual), bukan bagian dari label.
+    // PDF pakai origin kiri-BAWAH, makanya nanti dikonversi: y = tinggi_halaman - offset - ukuran.
+    // Angka di bawah ini masih TEBAKAN AWAL, perlu dikalibrasi manual lihat hasil cetak.
+    QR_OFFSET_FROM_TOP: 230,
+
     TARGET_PAGE_INDEX: 0,
+
+    // Ukuran QR dalam POINT TETAP (bukan persentase). Ini SENGAJA fixed, karena ukuran
+    // fisik resi (barcode, teks, dst) selalu sama -- yang berubah cuma ukuran kanvas/kertasnya,
+    // bukan ukuran kontennya. Kalau ikut persentase lebar halaman, QR jadi ikut membesar
+    // di kertas A4 padahal harusnya tetap sekecil di thermal.
+    QR_SIZE: 60,
 
     DEBUG: true,
   };
@@ -18,70 +36,27 @@
 
   const log = (...args) => CONFIG.DEBUG && console.log('[ResiQRBackup]', ...args);
 
-  let lastResiNo = null;
-  // Maping: original blob URL -> Promise<modified blob URL>
+  // Map: original blob URL -> Promise<modified blob URL>
   const pendingModifications = new Map();
 
-  // ---------- 1. Tangkap nomor resi dari JSON (untuk isi QR) ----------
-  // Coba tangkap lewat fetch()...
-  const originalFetch = window.fetch;
-  window.fetch = async function (...args) {
-    const request = args[0];
-    const url = typeof request === 'string' ? request : request.url;
-    const match = url && url.match(CONFIG.URL_PATTERN);
-    const response = await originalFetch.apply(this, args);
-    if (match && response.ok) {
-      lastResiNo = match[1];
-      log('Nomor resi terdeteksi (via fetch):', lastResiNo);
-    }
-    return response;
-  };
-
-  // ...DAN lewat XMLHttpRequest (kalau app pakai Axios/XHR, yang mana defaultnya XHR)
-  const OriginalXHR = window.XMLHttpRequest;
-  const originalXhrOpen = OriginalXHR.prototype.open;
-  const originalXhrSend = OriginalXHR.prototype.send;
-
-  OriginalXHR.prototype.open = function (method, url, ...rest) {
-    this.__resiqr_url = url;
-    return originalXhrOpen.call(this, method, url, ...rest);
-  };
-
-  OriginalXHR.prototype.send = function (...args) {
-    const url = this.__resiqr_url;
-    const match = url && String(url).match(CONFIG.URL_PATTERN);
-    if (match) {
-      this.addEventListener('load', function () {
-        if (this.status >= 200 && this.status < 300) {
-          lastResiNo = match[1];
-          log('Nomor resi terdeteksi (via XHR):', lastResiNo);
-        }
-      });
-    }
-    return originalXhrSend.apply(this, args);
-  };
-
-  // ---------- 2. Hook createObjectURL: deteksi blob PDF, mulai proses modifikasi di background ----------
+  // ---------- Hook createObjectURL: deteksi blob PDF, cek Title-nya, suntik QR kalau match ----------
   const originalCreateObjectURL = URL.createObjectURL.bind(URL);
   URL.createObjectURL = function (blob) {
     const originalUrl = originalCreateObjectURL(blob);
 
-    // LOG SEMUA pemanggilan createObjectURL, apapun tipenya, buat diagnosis
-    if (blob instanceof Blob) {
-      log('createObjectURL dipanggil. type:', JSON.stringify(blob.type), 'size:', blob.size, 'url:', originalUrl, 'lastResiNo:', lastResiNo);
-    }
-
-    // Perlonggar filter: terima juga type kosong/octet-stream, asal ukurannya masuk akal buat PDF
     const looksLikePdfBlob =
       blob instanceof Blob &&
       (blob.type === 'application/pdf' || blob.type === '' || blob.type === 'application/octet-stream') &&
       blob.size > 500;
 
-    if (looksLikePdfBlob && lastResiNo) {
-      log('Blob PDF terdeteksi, mulai proses suntik QR di background...', originalUrl);
-      const noResi = lastResiNo;
-      const modPromise = injectQrIntoPdfBlob(blob, noResi)
+    if (looksLikePdfBlob) {
+      log('Blob PDF terdeteksi, cek Title metadata...', originalUrl);
+      const modPromise = injectQrIfResi(blob)
         .then((modifiedBlob) => {
+          if (modifiedBlob === null) {
+            log('Title tidak cocok pola resi, dilewati (tidak diubah).');
+            return originalUrl;
+          }
           const modifiedUrl = originalCreateObjectURL(modifiedBlob);
           log('Versi PDF + QR siap:', modifiedUrl);
           return modifiedUrl;
@@ -97,10 +72,9 @@
     return originalUrl;
   };
 
-  // ---------- 3. Hook window.open: begitu tab baru dibuka dgn URL yg sedang diproses, redirect ke versi ber-QR ----------
+  // ---------- Hook window.open: begitu tab baru dibuka dgn URL yg sedang diproses, redirect ke versi ber-QR ----------
   const originalWindowOpen = window.open.bind(window);
   window.open = function (url, ...rest) {
-    log('window.open dipanggil dengan url:', url, 'ada di pendingModifications?', pendingModifications.has(url));
     const win = originalWindowOpen(url, ...rest);
 
     if (url && pendingModifications.has(url) && win) {
@@ -126,7 +100,6 @@
       const anchor = e.target.closest && e.target.closest('a[href^="blob:"]');
       if (!anchor) return;
       const url = anchor.href;
-      log('Klik pada <a href="blob:...">terdeteksi:', url, 'ada di pendingModifications?', pendingModifications.has(url));
 
       if (pendingModifications.has(url)) {
         pendingModifications.get(url).then((modifiedUrl) => {
@@ -140,11 +113,32 @@
     true // capture phase, supaya kedeteksi sebelum event handler asli
   );
 
-  // ---------- Helper: suntik QR ke bytes PDF pakai pdf-lib ----------
-  async function injectQrIntoPdfBlob(blob, noResi) {
+  // ---------- Helper utama: cek Title, kalau cocok pola resi -> suntik QR ----------
+  async function injectQrIfResi(blob) {
     const pdfBytes = new Uint8Array(await blob.arrayBuffer());
     const { PDFDocument } = window.PDFLib;
     const pdfDoc = await PDFDocument.load(pdfBytes);
+
+    const title = pdfDoc.getTitle() || '';
+    log('Title metadata PDF:', JSON.stringify(title));
+
+    if (!CONFIG.TITLE_MUST_CONTAIN.test(title)) {
+      return null; // Title nggak mengandung kata "resi" (atau kata kunci lain yang dikonfigurasi), skip
+    }
+
+    const numberMatch = title.match(CONFIG.RESI_NUMBER_PATTERN);
+    if (!numberMatch) {
+      log('Ada kata "resi" di Title, tapi pola nomor resi tidak ketemu. Skip.');
+      return null;
+    }
+
+    const noResi = numberMatch[0].toUpperCase();
+    log('Cocok pola resi! Nomor resi dari Title:', noResi);
+
+    const pages = pdfDoc.getPages();
+    const pageIndex = Math.min(CONFIG.TARGET_PAGE_INDEX, pages.length - 1);
+    const page = pages[pageIndex];
+    log('Ukuran halaman PDF (pt):', page.getWidth(), 'x', page.getHeight());
 
     const qrDataUrl = await QRCodeLib.toDataURL(noResi, {
       width: 300,
@@ -154,14 +148,9 @@
     const qrPngBytes = base64ToUint8Array(qrDataUrl.split(',')[1]);
     const qrImage = await pdfDoc.embedPng(qrPngBytes);
 
-    const pages = pdfDoc.getPages();
-    const pageIndex = Math.min(CONFIG.TARGET_PAGE_INDEX, pages.length - 1);
-    const page = pages[pageIndex];
-    log('Ukuran halaman PDF (pt):', page.getWidth(), 'x', page.getHeight());
-
     page.drawImage(qrImage, {
       x: CONFIG.QR_X,
-      y: CONFIG.QR_Y,
+      y: page.getHeight() - CONFIG.QR_OFFSET_FROM_TOP - CONFIG.QR_SIZE,
       width: CONFIG.QR_SIZE,
       height: CONFIG.QR_SIZE,
     });
@@ -177,5 +166,5 @@
     return bytes;
   }
 
-  log('Resi QR Backup extension aktif (mode: blob PDF interception).');
+  log('Resi QR Backup extension aktif (mode: cek Title metadata, tanpa fetch/XHR hook, tanpa pdf.js).');
 })();
