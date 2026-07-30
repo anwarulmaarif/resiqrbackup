@@ -26,7 +26,7 @@ Ekstensi ini tidak tersedia di Chrome Web Store karena belum dipublikasikan. Kar
 
 ## Cara Install
 
-### Linux
+### Linux (Deploy Policy)
 Jalankan kode berikut kedalam terminal
 ```
 curl -fsSL https://raw.githubusercontent.com/anwarulmaarif/resiqrbackup/main/deploy-policy.sh | sh
