@@ -77,7 +77,7 @@ Untuk uninstall atau menghapus ektensi ini silakan ikuti cara berikut
  - Jika install lewat Linux (Deploy Policy)
    1. buka terminal dan jalankan kode berikut
    ```
-   sudo tee /etc/opt/chrome/policies/managed/resiqrbackup.json
+   sudo rm /etc/opt/chrome/policies/managed/resiqrbackup.json
    ```
    2. tutup tab genesis dan buka tab baru untuk merefresh cache halaman.
 
