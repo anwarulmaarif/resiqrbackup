@@ -3,7 +3,7 @@ set -e
 
 POLICY_JSON='{
   "ExtensionInstallForcelist": [
-    "mhanihkoenmikcillkfniakbcdbkcelg;https://raw.githubusercontent.com/anwarulmaarif/resiqrbackup/main/update.xml"
+    "pedfaiennijocigknemmgemahbhgnldf;https://raw.githubusercontent.com/anwarulmaarif/resiqrbackup/main/update.xml"
   ]
 }'
 
